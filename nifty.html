@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NIFTY 50 Option Tool</title>
+  <style>
+    /* Global Styles */
+    body {
+      background-color: orange;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    /* Center container with white background, rounded corners and box-shadow */
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background-color: #fff;
+      color: #333;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    /* Headings */
+    h1, h2 {
+      color: maroon;
+    }
+    /* Input Field Styles */
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    /* Styling for Previous Close fields */
+    .ce-close {
+      background-color: #d4edda; /* light green */
+    }
+    .pe-close {
+      background-color: #f8d7da; /* light red */
+    }
+    /* Button Styling */
+    button {
+      margin-top: 20px;
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: maroon;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #a80000;
+    }
+    /* Error message styling */
+    .error {
+      color: red;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    /* Results Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+      color: #333;
+    }
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+        padding: 15px;
+      }
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="main">
+    <h1>NIFTY 50 Option Tool</h1>
+    <!-- User Input Section -->
+    <form id="optionForm" novalidate>
+      <!-- Current NIFTY 50 Value Input -->
+      <label for="niftyValue">Current NIFTY 50 Value:</label>
+      <input type="number" id="niftyValue" aria-describedby="niftyError" min="0" step="any" placeholder="Enter current NIFTY 50 value" required>
+      <div id="niftyError" class="error" aria-live="assertive"></div>
+      
+      <!-- ATM Strike Dropdown -->
+      <label for="atmStrike">Select ATM Strike:</label>
+      <select id="atmStrike" aria-describedby="atmError" required>
+        <option value="">-- Select a Strike --</option>
+      </select>
+      <div id="atmError" class="error" aria-live="assertive"></div>
+      
+      <!-- Auto-populated Option Strike Fields -->
+      <fieldset style="margin-top:20px;">
+        <legend>Option Strike Fields (auto-calculated)</legend>
+        <label for="ceITM2">CE Strike (ITM-2):</label>
+        <input type="number" id="ceITM2" readonly>
+        
+        <label for="ceITM">CE Strike (ITM):</label>
+        <input type="number" id="ceITM" readonly>
+        
+        <label for="selectedATM">ATM Strike:</label>
+        <input type="number" id="selectedATM" readonly>
+        
+        <label for="peITM">PE Strike (ITM):</label>
+        <input type="number" id="peITM" readonly>
+        
+        <label for="peITM2">PE Strike (ITM-2):</label>
+        <input type="number" id="peITM2" readonly>
+      </fieldset>
+      
+      <!-- Previous Close Inputs -->
+      <fieldset style="margin-top:20px;">
+        <legend>Previous Close Values</legend>
+        <!-- CE Previous Close Fields -->
+        <label for="cePrevITM2">CE Previous Close (ITM-2):</label>
+        <input type="number" id="cePrevITM2" class="ce-close" placeholder="Enter CE ITM-2 previous close" required>
+        
+        <label for="cePrevITM">CE Previous Close (ITM):</label>
+        <input type="number" id="cePrevITM" class="ce-close" placeholder="Enter CE ITM previous close" required>
+        
+        <label for="cePrevATM">CE Previous Close (ATM):</label>
+        <input type="number" id="cePrevATM" class="ce-close" placeholder="Enter CE ATM previous close" required>
+        
+        <!-- PE Previous Close Fields -->
+        <label for="pePrevITM2">PE Previous Close (ITM-2):</label>
+        <input type="number" id="pePrevITM2" class="pe-close" placeholder="Enter PE ITM-2 previous close" required>
+        
+        <label for="pePrevITM">PE Previous Close (ITM):</label>
+        <input type="number" id="pePrevITM" class="pe-close" placeholder="Enter PE ITM previous close" required>
+        
+        <label for="pePrevATM">PE Previous Close (ATM):</label>
+        <input type="number" id="pePrevATM" class="pe-close" placeholder="Enter PE ATM previous close" required>
+      </fieldset>
+      
+      <!-- Calculation Trigger Button -->
+      <button type="button" id="calcButton">Click to Get Levels</button>
+    </form>
+    
+    <!-- Results Display -->
+    <div id="resultsSection" style="display:none;">
+      <h2>Calculation Results <span id="timeStamp"></span></h2>
+      <table aria-label="Calculation results table">
+        <thead>
+          <tr>
+            <th>Strike Type</th>
+            <th>Strike</th>
+            <th>Break-Even Point (BEP)</th>
+            <th>Crossover Level</th>
+          </tr>
+        </thead>
+        <tbody id="resultsTableBody">
+          <!-- Dynamic rows will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <script>
+    // Get DOM elements for easy reference
+    const niftyValueInput = document.getElementById('niftyValue');
+    const niftyError = document.getElementById('niftyError');
+    const atmStrikeSelect = document.getElementById('atmStrike');
+    const atmError = document.getElementById('atmError');
+    const ceITM2 = document.getElementById('ceITM2');
+    const ceITM = document.getElementById('ceITM');
+    const selectedATM = document.getElementById('selectedATM');
+    const peITM = document.getElementById('peITM');
+    const peITM2 = document.getElementById('peITM2');
+    
+    const cePrevITM2 = document.getElementById('cePrevITM2');
+    const cePrevITM = document.getElementById('cePrevITM');
+    const cePrevATM = document.getElementById('cePrevATM');
+    const pePrevITM2 = document.getElementById('pePrevITM2');
+    const pePrevITM = document.getElementById('pePrevITM');
+    const pePrevATM = document.getElementById('pePrevATM');
+    
+    const calcButton = document.getElementById('calcButton');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const timeStamp = document.getElementById('timeStamp');
+    
+    // Utility function to format date/time in human-friendly manner
+    function getFormattedDateTime() {
+      const now = new Date();
+      return now.toLocaleString();
+    }
+    
+    // Function to update ATM strike dropdown based on current NIFTY 50 value
+    function updateAtmDropdown() {
+      atmStrikeSelect.innerHTML = '<option value="">-- Select a Strike --</option>';
+      let currentValue = parseFloat(niftyValueInput.value);
+      if (isNaN(currentValue) || currentValue <= 0) {
+        niftyError.textContent = "Please enter a valid positive NIFTY 50 value.";
+        return;
+      }
+      niftyError.textContent = "";
+      // Generate strikes from currentValue-500 to currentValue+500 in increments of 50
+      for (let strike = currentValue - 500; strike <= currentValue + 500; strike += 50) {
+        // Ensure strike is positive
+        if (strike > 0) {
+          let option = document.createElement('option');
+          option.value = strike;
+          option.textContent = strike;
+          atmStrikeSelect.appendChild(option);
+        }
+      }
+    }
+    
+    // Function to update auto-calculated option strike fields
+    function updateOptionStrikes() {
+      let atmVal = parseFloat(atmStrikeSelect.value);
+      if (isNaN(atmVal)) {
+        atmError.textContent = "Please select a valid ATM strike value.";
+        return;
+      }
+      atmError.textContent = "";
+      // Calculate values based on the selected ATM strike
+      ceITM2.value = atmVal - 200;
+      ceITM.value = atmVal - 100;
+      selectedATM.value = atmVal;
+      peITM.value = atmVal + 100;
+      peITM2.value = atmVal + 200;
+    }
+    
+    // Function to perform validations on previous close inputs
+    function validatePreviousCloses() {
+      let inputs = [cePrevITM2, cePrevITM, cePrevATM, pePrevITM2, pePrevITM, pePrevATM];
+      for (let input of inputs) {
+        if (input.value.trim() === "" || isNaN(parseFloat(input.value))) {
+          input.classList.add('input-error');
+          return false;
+        } else {
+          input.classList.remove('input-error');
+        }
+      }
+      return true;
+    }
+    
+    // Function to perform calculations and update results
+    function performCalculations() {
+      // Ensure all validations pass
+      if (!validatePreviousCloses()) {
+        alert("Please fill all Previous Close fields with valid numbers.");
+        return;
+      }
+      
+      // Parse previous close values for CE and PE for each strike type
+      const cePrev = {
+        ITM2: parseFloat(cePrevITM2.value),
+        ITM: parseFloat(cePrevITM.value),
+        ATM: parseFloat(cePrevATM.value)
+      };
+      const pePrev = {
+        ITM2: parseFloat(pePrevITM2.value),
+        ITM: parseFloat(pePrevITM.value),
+        ATM: parseFloat(pePrevATM.value)
+      };
+      
+      // Calculate Break-Even Points (BEP) using the average of corresponding CE and PE values.
+      // Here we assume BEP is calculated per strike type: ITM-2, ITM, ATM.
+      let BEP = {
+        ITM2: (cePrev.ITM2 + pePrev.ITM2) / 2,
+        ITM: (cePrev.ITM + pePrev.ITM) / 2,
+        ATM: (cePrev.ATM + pePrev.ATM) / 2
+      };
+      
+      // Compute Crossover Levels with provided formulas:
+      // For CE (ITM): Average of PE Previous Close (ITM-2) and CE Previous Close (ATM).
+      let crossover = {
+        ceITM: (pePrev.ITM2 + cePrev.ATM) / 2,
+        // For ATM: Average of PE Previous Close (ITM) and CE Previous Close (PE ITM).
+        atm: (pePrev.ITM + cePrevITM.valueAsNumber /* Using CE Previous Close from ITM field? */) / 2,
+        // For PE (ITM): Average of PE Previous Close (ATM) and CE Previous Close (PE ITM-2).
+        peITM: (pePrev.ATM + cePrev.ITM2) / 2
+      };
+      // Note: The formula for ATM crossover uses "CE Previous Close (PE ITM)" which might be ambiguous.
+      // Here we assume it refers to the CE Previous Close for the ITM option.
+      
+      // Build an array of result objects to display in the table
+      const results = [
+        {
+          strikeType: "CE Strike (ITM-2)",
+          strike: ceITM2.value,
+          BEP: BEP.ITM2.toFixed(2),
+          crossover: crossover.peITM.toFixed(2)
+        },
+        {
+          strikeType: "CE Strike (ITM)",
+          strike: ceITM.value,
+          BEP: BEP.ITM.toFixed(2),
+          crossover: crossover.ceITM.toFixed(2)
+        },
+        {
+          strikeType: "At-the-Money",
+          strike: selectedATM.value,
+          BEP: BEP.ATM.toFixed(2),
+          crossover: crossover.atm.toFixed(2)
+        },
+        {
+          strikeType: "PE Strike (ITM)",
+          strike: peITM.value,
+          BEP: BEP.ITM.toFixed(2),
+          crossover: crossover.ceITM.toFixed(2)
+        },
+        {
+          strikeType: "PE Strike (ITM-2)",
+          strike: peITM2.value,
+          BEP: BEP.ITM2.toFixed(2),
+          crossover: crossover.peITM.toFixed(2)
+        }
+      ];
+      
+      // Update the results table
+      resultsTableBody.innerHTML = "";
+      results.forEach(result => {
+        const tr = document.createElement('tr');
+        for (let key of ['strikeType', 'strike', 'BEP', 'crossover']) {
+          const td = document.createElement('td');
+          td.textContent = result[key];
+          tr.appendChild(td);
+        }
+        resultsTableBody.appendChild(tr);
+      });
+      
+      // Update timestamp
+      timeStamp.textContent = `(Calculated on: ${getFormattedDateTime()})`;
+      resultsSection.style.display = "block";
+    }
+    
+    // Event Listeners
+    
+    // Update dropdown options when current NIFTY value changes
+    niftyValueInput.addEventListener('input', updateAtmDropdown);
+    
+    // Update auto-calculated option strike fields when ATM dropdown changes
+    atmStrikeSelect.addEventListener('change', updateOptionStrikes);
+    
+    // Trigger calculations when button is clicked
+    calcButton.addEventListener('click', () => {
+      try {
+        performCalculations();
+      } catch (error) {
+        console.error("Calculation error:", error);
+        alert("An error occurred during calculations. Please check your inputs.");
+      }
+    });
+    
+    // Keyboard Navigation: Move focus to next input on Enter key
+    const formElements = Array.from(document.querySelectorAll('#optionForm input, #optionForm select'));
+    formElements.forEach((elem, index) => {
+      elem.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          let nextElem = formElements[index + 1];
+          if (nextElem) {
+            nextElem.focus();
+          } else {
+            calcButton.focus();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
